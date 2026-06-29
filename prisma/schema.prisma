@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admins {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name     String          @db.VarChar(100)
+  phone         String          @unique @db.VarChar(20)
+  email         String          @unique @db.VarChar(100)
+  password_hash String          @db.VarChar(255)
+  admin_type    admin_type_enum
+  is_active     Boolean?        @default(true)
+  last_login    DateTime?       @db.Timestamp(6)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  audit_logs    audit_logs[]
+}
+
+model audit_logs {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String    @db.Uuid
+  admin_name  String    @db.VarChar(100)
+  action      String    @db.VarChar(100)
+  entity_type String    @db.VarChar(50)
+  entity_id   String    @db.Uuid
+  details     Json?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  admins      admins    @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_audit_admin")
+
+  @@index([admin_id], map: "idx_audit_admin")
+  @@index([created_at], map: "idx_audit_created")
+  @@index([entity_type, entity_id], map: "idx_audit_entity")
+}
+
+model donations {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  donor_id      String    @db.Uuid
+  donation_date DateTime  @db.Date
+  notes         String?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  donors        donors    @relation(fields: [donor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_donation_donor")
+
+  @@index([donor_id], map: "idx_donation_donor")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model donors {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name           String           @db.VarChar(100)
+  phone               String           @unique @db.VarChar(20)
+  email               String           @unique @db.VarChar(100)
+  password_hash       String           @db.VarChar(255)
+  gender              gender_enum
+  city                String           @db.VarChar(100)
+  age                 Int
+  weight              weight_enum
+  blood_group         blood_group_enum
+  has_disease         Boolean
+  disease_description String?
+  previously_donated  Boolean
+  last_donated_date   DateTime?        @db.Date
+  eligible            Boolean?         @default(true)
+  unresponsive_count  Int?             @default(0)
+  disqualified        Boolean?         @default(false)
+  email_verified      Boolean?         @default(false)
+  last_login          DateTime?        @db.Timestamp(6)
+  created_at          DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?        @default(now()) @db.Timestamp(6)
+  donations           donations[]
+
+  @@index([blood_group], map: "idx_donor_bloodgroup")
+  @@index([city], map: "idx_donor_city")
+  @@index([disqualified], map: "idx_donor_disqualified")
+  @@index([eligible], map: "idx_donor_eligible")
+  @@index([last_donated_date], map: "idx_donor_last_donated")
+}
+
+model otps {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String           @db.VarChar(100)
+  otp_code   String           @db.VarChar(10)
+  purpose    otp_purpose_enum
+  attempts   Int?             @default(0)
+  expires_at DateTime         @db.Timestamp(6)
+  used       Boolean?         @default(false)
+  created_at DateTime?        @default(now()) @db.Timestamp(6)
+
+  @@index([email], map: "idx_otp_email")
+  @@index([expires_at], map: "idx_otp_expiry")
+}
+
+enum admin_type_enum {
+  super
+  regular
+}
+
+enum blood_group_enum {
+  A_PLUS   @map("A+")
+  A_MINUS  @map("A-")
+  B_PLUS   @map("B+")
+  B_MINUS  @map("B-")
+  AB_PLUS  @map("AB+")
+  AB_MINUS @map("AB-")
+  O_PLUS   @map("O+")
+  O_MINUS  @map("O-")
+}
+
+enum gender_enum {
+  Male
+  Female
+  Other
+}
+
+enum otp_purpose_enum {
+  registration
+  forgot_password
+}
+
+enum weight_enum {
+  Below_50kg @map("Below 50kg")
+  kg         @map("50kg")
+  Above_50kg @map("Above 50kg")
+}
