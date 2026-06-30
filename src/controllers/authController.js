@@ -1,15 +1,22 @@
+// STEP 1
 // this code just ensures when the first time someone enters the system and tries to log in as admin
 // he gets registered as a super admin, it checks if there are no already existing admins
 // if admin_count == 0, the first registered admin is a super admin and he can then register more admins 
 // via his dashboard
 
+// STEP 2
+// we need to give the super admins a way to prove who they are by handing then the gigital VIP wristband
+// security checkpoint - verifies admin's identity and issues them a digital pass (JWT)
 
-// // imports database orm tool to easily read and write data to your database
+// imports database orm tool to easily read and write data to your database
 const { PrismaClient } = require('@prisma/client');
 
 // imports the library to hash passwords
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
+
+// imports the library responsible for making JSON web tokens
+const jwt = require('jsonwebtoken');
 
 // Helper to enforce SRS password rules: 6-16 chars, 1 letter, 1 number
 const validatePassword = (password) => {
@@ -83,4 +90,82 @@ const registerAdmin = async (req, res) => {
   }
 };
 
-module.exports = { registerAdmin };
+
+const loginAdmin = async (req, res) => {
+  try {
+    // extract credentials
+    const { phone, password } = req.body;
+
+    // 1. Ensure both fields are provided
+    if (!phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number and password are required.',
+        data: null,
+        errors: ['Missing Credentials']
+      });
+    }
+
+    // 2. Find the admin by their unique phone number
+    const admin = await prisma.admins.findUnique({
+      where: { phone }
+    });
+
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password.',
+        data: null,
+        errors: ['Authentication Failed']
+      });
+    }
+
+    // 3. Verify the password against the stored hash
+    const isPasswordValid = await bcrypt.compare(password, admin.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password.',
+        data: null,
+        errors: ['Authentication Failed']
+      });
+    }
+
+    // 4. Generate the JWT (The VIP Wristband)
+    const token = jwt.sign(
+      { 
+        userId: admin.id, 
+        role: 'admin', 
+        adminType: admin.admin_type 
+      },
+      process.env.JWT_SECRET,  // secret key - locks the token
+      { expiresIn: '24h' } // From SRS 5.1: Access tokens expire after 24 hours
+    );
+
+    // 5. Send back the token and safe user data
+    return res.status(200).json({
+      success: true,
+      message: 'Admin logged in successfully.',
+      data: {
+        token,
+        admin: {
+          id: admin.id,
+          name: admin.name,
+          admin_type: admin.admin_type
+        }
+      },
+      errors: null
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error during login.',
+      data: null,
+      errors: [error.message]
+    });
+  }
+};
+
+// UPDATE YOUR EXPORT AT THE VERY BOTTOM TO INCLUDE BOTH FUNCTIONS
+module.exports = { registerAdmin, loginAdmin };
