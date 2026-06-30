@@ -3,7 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 
 dotenv.config();
-
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const app = express();
 
 app.use(cors());
@@ -31,6 +31,9 @@ app.get("/test-email", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+const authRoutes = require("./src/routes/authRoutes");
+app.use("/api/donor", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
