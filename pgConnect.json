@@ -7,7 +7,7 @@
             "Port": 25625,
             "MaintenanceDB": "defaultdb",
             "Username": "avnadmin",
-            "SSLMode": "require"
+            "SSLMode":"require"
         }
     }
 }
