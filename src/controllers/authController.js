@@ -186,8 +186,86 @@ const loginDonor = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const donor = await prisma.donors.findUnique({
+      where: { email: email },
+    });
+    if (!donor) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No donor found with this email." });
+    }
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.otps.create({
+      data: {
+        email: email,
+        otp_code: otp,
+        purpose: "forgot_password",
+        expires_at: expiresAt,
+      },
+    });
+    await sendOTPEmail(
+      email,
+      otp,
+      `Your OTP for password reset is: ${otp}. It will expire in 10 minutes.`,
+    );
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to email for password reset.",
+    });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, new_password } = req.body;
+    const otpRecord = await prisma.otps.findFirst({
+      where: {
+        email: email,
+        otp_code: String(otp),
+        purpose: "forgot_password",
+      },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "Invalid OTP." });
+    }
+    if (new Date() > otpRecord.expires_at) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired. Please request a new one.",
+      });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(new_password, salt);
+
+    await prisma.donors.update({
+      where: { email: email },
+      data: { password_hash: hashedPassword },
+    });
+    await prisma.otps.deleteMany({
+      where: { email: email, purpose: "forgot_password" },
+    });
+    res.status(200).json({
+      success: true,
+      message:
+        "Password reset successful! You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 module.exports = {
   initiateRegistration,
   verifyOTPAndRegister,
   loginDonor,
+  forgotPassword,
+  resetPassword,
 };
