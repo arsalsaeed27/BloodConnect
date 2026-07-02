@@ -10,6 +10,7 @@ const prisma = new PrismaClient({ adapter });
 const generateOTP = require("../utils/generateOTP");
 const { sendOTPEmail } = require("../config/emailConfig");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const initiateRegistration = async (req, res) => {
   try {
@@ -129,7 +130,64 @@ const verifyOTPAndRegister = async (req, res) => {
   }
 };
 
+const loginDonor = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const donor = await prisma.donors.findUnique({
+      where: { email: email },
+    });
+    if (!donor) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid email or password." });
+    }
+    if (donor.disease_desqualified) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Your are disqualified.." });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, donor.password_hash);
+    if (!isPasswordValid) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid email or password." });
+    }
+
+    await prisma.donors.update({
+      where: { email: email },
+      data: { last_login: new Date() },
+    });
+
+    const token = jwt.sign(
+      {
+        id: donor.id,
+        email: donor.email,
+        role: "donor",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }, // logged in for 7 days
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful!",
+      token: token,
+      user: {
+        id: donor.id,
+        full_name: donor.full_name,
+        email: donor.email,
+        blood_group: donor.blood_group,
+      },
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   initiateRegistration,
   verifyOTPAndRegister,
+  loginDonor,
 };
