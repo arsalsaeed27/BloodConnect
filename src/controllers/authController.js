@@ -9,11 +9,18 @@
 // security checkpoint - verifies admin's identity and issues them a digital pass (JWT)
 
 // imports database orm tool to easily read and write data to your database
-const { PrismaClient } = require('@prisma/client');
-
+const { PrismaClient } = require('../../generated/prisma');
+const { PrismaPg } = require('@prisma/adapter-pg');
 // imports the library to hash passwords
 const bcrypt = require('bcrypt');
-const prisma = new PrismaClient();
+
+// Prisma 7 requires an explicit driver adapter (no more bundled query engine)
+// rejectUnauthorized: false because Aiven's Postgres cert chain isn't in Node's default trust store
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+const prisma = new PrismaClient({ adapter });
 
 // imports the library responsible for making JSON web tokens
 const jwt = require('jsonwebtoken');
@@ -41,7 +48,7 @@ const registerAdmin = async (req, res) => {
     }
 
     // data extraction
-    const { name, phone, email, password } = req.body;
+    const { full_name, phone, email, password } = req.body;
 
     // 2. Validate Password
     if (!validatePassword(password)) {
@@ -59,7 +66,7 @@ const registerAdmin = async (req, res) => {
     // 4. Create the Super Admin
     const newAdmin = await prisma.admins.create({
       data: {
-        name,
+        full_name,
         phone,
         email,
         password_hash,
@@ -73,7 +80,7 @@ const registerAdmin = async (req, res) => {
       message: 'Super Admin successfully registered.',
       data: {
         id: newAdmin.id,
-        name: newAdmin.name,
+        full_name: newAdmin.full_name,
         email: newAdmin.email,
         admin_type: newAdmin.admin_type
       },
@@ -150,7 +157,7 @@ const loginAdmin = async (req, res) => {
         token,
         admin: {
           id: admin.id,
-          name: admin.name,
+          full_name: admin.full_name,
           admin_type: admin.admin_type
         }
       },
