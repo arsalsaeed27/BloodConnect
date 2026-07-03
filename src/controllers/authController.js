@@ -262,43 +262,9 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
-module.exports = {
-  initiateRegistration,
-  verifyOTPAndRegister,
-  loginDonor,
-  forgotPassword,
-  resetPassword,
-};
-// STEP 1
-// this code just ensures when the first time someone enters the system and tries to log in as admin
-// he gets registered as a super admin, it checks if there are no already existing admins
-// if admin_count == 0, the first registered admin is a super admin and he can then register more admins 
-// via his dashboard
 
-// STEP 2
-// we need to give the super admins a way to prove who they are by handing then the gigital VIP wristband
-// security checkpoint - verifies admin's identity and issues them a digital pass (JWT)
-
-// imports database orm tool to easily read and write data to your database
-const { PrismaClient } = require('../../generated/prisma');
-const { PrismaPg } = require('@prisma/adapter-pg');
-// imports the library to hash passwords
-const bcrypt = require('bcrypt');
-
-// Prisma 7 requires an explicit driver adapter (no more bundled query engine)
-// rejectUnauthorized: false because Aiven's Postgres cert chain isn't in Node's default trust store
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-const prisma = new PrismaClient({ adapter });
-
-// imports the library responsible for making JSON web tokens
-const jwt = require('jsonwebtoken');
-
-// Helper to enforce SRS password rules: 6-16 chars, 1 letter, 1 number
 const validatePassword = (password) => {
-    // regex -> regular function
+  // regex -> regular function
   const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{6,16}$/;
   return regex.test(password);
 };
@@ -312,9 +278,10 @@ const registerAdmin = async (req, res) => {
     if (adminCount > 0) {
       return res.status(403).json({
         success: false,
-        message: 'Admin registration is permanently locked. Contact a Super Admin.',
+        message:
+          "Admin registration is permanently locked. Contact a Super Admin.",
         data: null,
-        errors: ['Forbidden: Endpoint Locked']
+        errors: ["Forbidden: Endpoint Locked"],
       });
     }
 
@@ -325,9 +292,10 @@ const registerAdmin = async (req, res) => {
     if (!validatePassword(password)) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be 6-16 characters with at least one letter and one number.',
+        message:
+          "Password must be 6-16 characters with at least one letter and one number.",
         data: null,
-        errors: ['Weak Password']
+        errors: ["Weak Password"],
       });
     }
 
@@ -341,33 +309,31 @@ const registerAdmin = async (req, res) => {
         phone,
         email,
         password_hash,
-        admin_type: 'super'
-      }
+        admin_type: "super",
+      },
     });
 
     // success response
     return res.status(201).json({
       success: true,
-      message: 'Super Admin successfully registered.',
+      message: "Super Admin successfully registered.",
       data: {
         id: newAdmin.id,
         full_name: newAdmin.full_name,
         email: newAdmin.email,
-        admin_type: newAdmin.admin_type
+        admin_type: newAdmin.admin_type,
       },
-      errors: null
+      errors: null,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Internal server error during registration.',
+      message: "Internal server error during registration.",
       data: null,
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 };
-
 
 const loginAdmin = async (req, res) => {
   try {
@@ -378,23 +344,23 @@ const loginAdmin = async (req, res) => {
     if (!phone || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number and password are required.',
+        message: "Phone number and password are required.",
         data: null,
-        errors: ['Missing Credentials']
+        errors: ["Missing Credentials"],
       });
     }
 
     // 2. Find the admin by their unique phone number
     const admin = await prisma.admins.findUnique({
-      where: { phone }
+      where: { phone },
     });
 
     if (!admin) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid phone number or password.',
+        message: "Invalid phone number or password.",
         data: null,
-        errors: ['Authentication Failed']
+        errors: ["Authentication Failed"],
       });
     }
 
@@ -403,47 +369,54 @@ const loginAdmin = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid phone number or password.',
+        message: "Invalid phone number or password.",
         data: null,
-        errors: ['Authentication Failed']
+        errors: ["Authentication Failed"],
       });
     }
 
     // 4. Generate the JWT (The VIP Wristband)
     const token = jwt.sign(
-      { 
-        userId: admin.id, 
-        role: 'admin', 
-        adminType: admin.admin_type 
+      {
+        userId: admin.id,
+        role: "admin",
+        adminType: admin.admin_type,
       },
-      process.env.JWT_SECRET,  // secret key - locks the token
-      { expiresIn: '24h' } // From SRS 5.1: Access tokens expire after 24 hours
+      process.env.JWT_SECRET, // secret key - locks the token
+      { expiresIn: "24h" }, // From SRS 5.1: Access tokens expire after 24 hours
     );
 
     // 5. Send back the token and safe user data
     return res.status(200).json({
       success: true,
-      message: 'Admin logged in successfully.',
+      message: "Admin logged in successfully.",
       data: {
         token,
         admin: {
           id: admin.id,
           full_name: admin.full_name,
-          admin_type: admin.admin_type
-        }
+          admin_type: admin.admin_type,
+        },
       },
-      errors: null
+      errors: null,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Internal server error during login.',
+      message: "Internal server error during login.",
       data: null,
-      errors: [error.message]
+      errors: [error.message],
     });
   }
 };
 
-// UPDATE YOUR EXPORT AT THE VERY BOTTOM TO INCLUDE BOTH FUNCTIONS
-module.exports = { registerAdmin, loginAdmin };
+// ONE EXPORT TO RULE THEM ALL
+module.exports = {
+  initiateRegistration,
+  verifyOTPAndRegister,
+  loginDonor,
+  forgotPassword,
+  resetPassword,
+  registerAdmin,
+  loginAdmin,
+};
