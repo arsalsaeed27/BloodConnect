@@ -1,3 +1,30 @@
+const jwt = require("jsonwebtoken");
+const protect = (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      next();
+    } catch (error) {
+      console.error("Token verification error:", error);
+      return res
+        .status(401)
+        .json({ success: false, message: "Not authorized, token failed" });
+    }
+  }
+  if (!token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Not authorized, no token" });
+  }
+};
+
+module.exports = { protect };
 //  look at the HTTP header for a token, verify it, and attach the user to the request object if valid.
 
 // defines an express.js middleware function that acts as a security layer for routes that require authentication. It checks for a JWT in the request headers, verifies it, and either allows the request to proceed or responds with an error if the token is missing or invalid.
