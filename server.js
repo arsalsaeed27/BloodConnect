@@ -3,7 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const adminRoutes = require('./src/routes/adminRoutes');
 
-// TEMPORARY: Allow insecure TLS for local development
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const app = express();
@@ -17,7 +16,6 @@ app.use('/api/admin', adminRoutes);
 const { sendOTPEmail } = require("./src/config/emailConfig");
 const generateOTP = require("./src/utils/generateOTP");
 
-// Basic Health Check Route
 app.get("/", (req, res) => {
   res.json({ success: true, message: "BloodConnect API is running!" });
 });
@@ -37,11 +35,11 @@ app.get("/test-email", async (req, res) => {
   }
 });
 
-// --- ROUTES ---
 const authRoutes = require("./src/routes/authRoutes");
 app.use("/api/donor", authRoutes);
+const donorRoutes = require("./src/routes/donorRoutes");
+app.use("/api/donor", donorRoutes);
 
-// --- SERVER LISTENER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is successfully running on port ${PORT}`);
