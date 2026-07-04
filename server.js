@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const requestRoutes = require('./src/routes/requestRoutes');
 const cors = require("cors");
 const adminRoutes = require('./src/routes/adminRoutes');
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // Mount the admin routes to a dedicated /api/admin prefix
 app.use('/api/admin', adminRoutes);
+app.use('/api/requests', requestRoutes);
 
 const { sendOTPEmail } = require("./src/config/emailConfig");
 const generateOTP = require("./src/utils/generateOTP");

@@ -51,6 +51,7 @@ model donations {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model donors {
   id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  blood_requests      BloodRequests[]
   full_name           String           @db.VarChar(100)
   phone               String           @unique @db.VarChar(20)
   email               String           @unique @db.VarChar(100)
@@ -125,4 +126,20 @@ enum weight_enum {
   Below_50kg @map("Below 50kg")
   kg         @map("50kg")
   Above_50kg @map("Above 50kg")
+}
+
+model BloodRequests {
+  id               String   @id @default(uuid()) @db.Uuid
+  patient_name     String
+  blood_group      String
+  city             String
+  hospital_name    String?  
+  contact_phone    String
+  urgency_level    String   @default("normal") 
+  status           String   @default("pending") 
+  request_date     DateTime @default(now())
+  
+  // Explicitly tell Postgres this string is a UUID to match the donors table
+  fulfilled_by_id  String?  @db.Uuid
+  donor            donors?  @relation(fields: [fulfilled_by_id], references: [id])
 }
