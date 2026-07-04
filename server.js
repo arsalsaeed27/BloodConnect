@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const adminRoutes = require('./src/routes/adminRoutes');
 
 // TEMPORARY: Allow insecure TLS for local development
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -9,6 +10,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Mount the admin routes to a dedicated /api/admin prefix
+app.use('/api/admin', adminRoutes);
 
 const { sendOTPEmail } = require("./src/config/emailConfig");
 const generateOTP = require("./src/utils/generateOTP");
