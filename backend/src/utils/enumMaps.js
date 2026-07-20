@@ -21,4 +21,18 @@ const WEIGHT_CATEGORY_MAP = {
   'Above 50kg': 'ABOVE_50KG',
 };
 
-module.exports = { BLOOD_GROUP_MAP, WEIGHT_CATEGORY_MAP };
+function reverseOf(map) {
+  return Object.fromEntries(Object.entries(map).map(([key, value]) => [value, key]));
+}
+
+// For the reverse direction: translating a Prisma Client enum key back to
+// its human-readable display value for API responses.
+const BLOOD_GROUP_REVERSE_MAP = reverseOf(BLOOD_GROUP_MAP);
+const WEIGHT_CATEGORY_REVERSE_MAP = reverseOf(WEIGHT_CATEGORY_MAP);
+
+module.exports = {
+  BLOOD_GROUP_MAP,
+  WEIGHT_CATEGORY_MAP,
+  BLOOD_GROUP_REVERSE_MAP,
+  WEIGHT_CATEGORY_REVERSE_MAP,
+};
