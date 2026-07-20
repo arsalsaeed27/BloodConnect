@@ -1,8 +1,17 @@
 node_modules/
 .env
+.env.*.local
 *.log
 dist/
+build/
+coverage/
 
-# Add these:
+# Prisma generated client
 generated/
 prisma/generated/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
